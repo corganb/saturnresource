@@ -229,17 +229,42 @@
   sun.position.set(5, 2, 5);
   scene.add(sun);
 
-  // Planet sphere
+  // Saturn body with surface texture + ring plane
   var geometry = new THREE.SphereGeometry(1.5, 96, 64);
+  var texLoader = new THREE.TextureLoader();
+  texLoader.crossOrigin = 'anonymous';
   var material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#d4b46a'),
-    emissive: new THREE.Color('#000000'),
-    emissiveIntensity: 0.15,
+    map: texLoader.load('https://terraresource.net/assets/planet-textures/2k_saturn.jpg'),
     roughness: 0.85,
     metalness: 0.0
   });
   var planet = new THREE.Mesh(geometry, material);
   scene.add(planet);
+  // Ring system (inner 1.4 * radius -> outer 2.6 * radius approx)
+  (function rings() {
+    var ringGeo = new THREE.RingGeometry(2.1, 3.8, 128);
+    // Remap UVs so the alpha ring texture tiles radially rather than angularly
+    var pos = ringGeo.attributes.position;
+    var uv = ringGeo.attributes.uv;
+    for (var i = 0; i < pos.count; i++) {
+      var x = pos.getX(i);
+      var y = pos.getY(i);
+      var r = Math.sqrt(x*x + y*y);
+      var t = (r - 2.1) / (3.8 - 2.1);
+      uv.setXY(i, t, 0.5);
+    }
+    uv.needsUpdate = true;
+    var ringMat = new THREE.MeshBasicMaterial({
+      map: texLoader.load('https://terraresource.net/assets/planet-textures/2k_saturn_ring_alpha.png'),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false
+    });
+    var ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2 + 0.18;
+    scene.add(ring);
+  })();
 
   // Subtle starfield
   (function stars() {

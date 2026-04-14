@@ -98,6 +98,13 @@
   .sidebar-left .info-row { padding: 4px 0; display: flex; justify-content: space-between; color: var(--t3); border-bottom: 1px dashed rgba(255,255,255,0.04); }
   .sidebar-left .info-row span:last-child { color: var(--t2); }
   .sidebar-left .coming-soon { margin-top: 14px; padding: 10px; background: rgba(255,255,255,0.02); border: 1px dashed var(--b1); border-radius: 6px; font-size: 10.5px; color: var(--t3); }
+  .ly-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.04); cursor: pointer; }
+  .ly-item:hover { background: rgba(255,255,255,0.02); }
+  .ly-check { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--b2); flex-shrink: 0; margin-top: 2px; background: transparent; cursor: pointer; }
+  .ly-check.on { background: var(--accent); border-color: var(--accent); }
+  .ly-body { flex: 1; min-width: 0; }
+  .ly-name { font-size: 11.5px; color: var(--t2); }
+  .ly-desc { font-size: 10px; color: var(--t4); margin-top: 2px; line-height: 1.4; }
   .viewer { flex: 1; position: relative; background: var(--bg); }
   #scene { width: 100%; height: 100%; display: block; }
 
@@ -160,10 +167,8 @@
     <div class="info-row"><span>Sidereal day</span><span>10h 33m</span></div>
     <div class="info-row"><span>Dist. from Sun</span><span>1.43 B km (9.58 AU)</span></div>
 
-    <h3>Roadmap v0.2</h3>
-    <div class="coming-soon">
-      Ring system dynamics (A, B, C, F rings); Cassini archive; Titan atmosphere; Enceladus plume tracking; hexagonal polar vortex.
-    </div>
+    <h3>Layers</h3>
+    <div id="layer-list"></div>
 
     <h3>Resource Systems</h3>
     <div class="info-row"><span>Sibling sites</span><span>13</span></div>
@@ -238,9 +243,9 @@
   scene.add(tiltGroup);
   tiltGroup.add(planet);
   // Ring system (inner 1.4 * radius -> outer 2.6 * radius approx)
+  var ringMesh;
   (function rings() {
     var ringGeo = new THREE.RingGeometry(2.1, 3.8, 128);
-    // Remap UVs so the alpha ring texture tiles radially rather than angularly
     var pos = ringGeo.attributes.position;
     var uv = ringGeo.attributes.uv;
     for (var i = 0; i < pos.count; i++) {
@@ -258,13 +263,9 @@
       opacity: 0.9,
       depthWrite: false
     });
-    var ring = new THREE.Mesh(ringGeo, ringMat);
-    // Ring is horizontal in tiltGroup's local frame; tiltGroup's
-    // Z-rotation then tilts it to match Saturn's axial tilt. The
-    // planet spins via its own rotation.y which is local to the
-    // tilt group, so the ring doesn't rotate with the body.
-    ring.rotation.x = -Math.PI / 2;
-    tiltGroup.add(ring);
+    ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = -Math.PI / 2;
+    tiltGroup.add(ringMesh);
   })();
 
   // ═══ SATURN MAJOR MOONS (Kepler orbits, real scale) ═══
@@ -297,10 +298,12 @@
       var th = (k / 128) * Math.PI * 2;
       pts.push(new THREE.Vector3(m.a * Math.cos(th), 0, m.a * Math.sin(th)));
     }
-    tiltGroup.add(new THREE.Line(
+    var orbitLine = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
       new THREE.LineBasicMaterial({ color: m.color, transparent: true, opacity: 0.3 })
-    ));
+    );
+    tiltGroup.add(orbitLine);
+    m.orbitLine = orbitLine;
   });
 
   function solveKepler(M, e) {
@@ -314,15 +317,57 @@
   }
 
   // ═══ CASSINI ARCHIVE MARKER ═══
-  // Cassini crashed into Saturn on 2017-09-15 (Grand Finale). No current orbit.
-  // Mark the spot in space where Cassini is commemorated, at 1.5x Titan's orbit.
+  var cassiniMesh;
   (function cassini() {
     var geo = new THREE.SphereGeometry(0.08, 16, 12);
     var mat = new THREE.MeshBasicMaterial({ color: 0xd4b46a });
-    var mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(20, 1, 8);
-    tiltGroup.add(mesh);
+    cassiniMesh = new THREE.Mesh(geo, mat);
+    cassiniMesh.position.set(20, 1, 8);
+    tiltGroup.add(cassiniMesh);
   })();
+
+  // ═══ LAYER TOGGLE SYSTEM ═══
+  var LAYERS = [
+    { id: 'surface', name: 'Saturn Cloud Bands', desc: '8K Cassini ISS composite',            visible: true },
+    { id: 'rings',   name: 'Ring System',        desc: 'A, B, C rings + alpha texture',       visible: true },
+    { id: 'moons',   name: 'Major Moons',        desc: 'Mimas, Enceladus, Tethys, Dione, Rhea, Titan, Iapetus (Kepler)', visible: true },
+    { id: 'orbits',  name: 'Moon Orbit Lines',   desc: 'Circular orbit approximations',       visible: true },
+    { id: 'cassini', name: 'Cassini Archive',    desc: 'Mission marker (ended 2017-09-15)',   visible: true },
+  ];
+  function setLayerVisible(id, on) {
+    var l = LAYERS.find(function(x) { return x.id === id; });
+    if (!l) return;
+    l.visible = on;
+    switch (id) {
+      case 'surface': planet.visible = on; break;
+      case 'rings':   if (ringMesh) ringMesh.visible = on; break;
+      case 'moons':   moonMeshes.forEach(function(m) { m.mesh.visible = on; }); break;
+      case 'orbits':  moonMeshes.forEach(function(m) { if (m.orbitLine) m.orbitLine.visible = on; }); break;
+      case 'cassini': if (cassiniMesh) cassiniMesh.visible = on; break;
+    }
+    renderLayerList();
+  }
+  function renderLayerList() {
+    var list = document.getElementById('layer-list');
+    if (!list) return;
+    var html = '';
+    LAYERS.forEach(function(l) {
+      html += '<div class="ly-item" data-layer="' + l.id + '">'
+           + '<button class="ly-check ' + (l.visible ? 'on' : '') + '" data-tog="' + l.id + '"></button>'
+           + '<div class="ly-body"><div class="ly-name">' + l.name + '</div><div class="ly-desc">' + l.desc + '</div></div></div>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll('[data-tog], [data-layer]').forEach(function(b) {
+      b.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = b.dataset.tog || b.dataset.layer;
+        var l = LAYERS.find(function(x) { return x.id === id; });
+        if (l) setLayerVisible(l.id, !l.visible);
+      });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderLayerList);
+  else renderLayerList();
 
   var SCENE_EPOCH_SEC = Date.now() / 1000;
   function updateMoons() {

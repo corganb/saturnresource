@@ -473,10 +473,15 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderLayerList);
   else renderLayerList();
 
-  var SCENE_EPOCH_SEC = Date.now() / 1000;
+  var __rs_sim_time = 0;
+  var __rs_last_wall = Date.now() / 1000;
   function updateMoons() {
     var TIME_SCALE = (typeof window !== "undefined" && window.__rs_time_scale != null) ? window.__rs_time_scale : 60; // Titan 15.9 d * 86400 / 2000 = ~11 min per orbit
-    var simTime = (Date.now() / 1000 - SCENE_EPOCH_SEC) * TIME_SCALE;
+    var __rs_now = Date.now() / 1000;
+    var __rs_ts = TIME_SCALE;
+    __rs_sim_time += (__rs_now - __rs_last_wall) * __rs_ts;
+    __rs_last_wall = __rs_now;
+    var simTime = __rs_sim_time;
     moonMeshes.forEach(function(m) {
       var n = (Math.PI * 2) / m.period;
       var M = (n * simTime) % (Math.PI * 2);

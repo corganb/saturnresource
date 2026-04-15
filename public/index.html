@@ -295,6 +295,24 @@
     { name: 'Titan',     a_km: 1221865, e: 0.0288, period_days: 15.945, color: 0xd4a860, radius: 0.10 },
     { name: 'Iapetus',   a_km: 3560854, e: 0.0286, period_days: 79.322, color: 0x888078, radius: 0.07 },
   ];
+  // Shared canvas-label helper. Makes a Sprite that always faces the
+  // camera with a stroked text layer for legibility against the scene.
+  function makeMoonLabel(text, hexColor) {
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 48;
+    var ctx = c.getContext('2d');
+    ctx.font = 'bold 22px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.strokeText(text, 128, 24);
+    ctx.fillStyle = hexColor;
+    ctx.fillText(text, 128, 24);
+    var tex = new THREE.CanvasTexture(c);
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+    sp.scale.set(0.55, 0.1, 1);
+    return sp;
+  }
+
   var moonMeshes = [];
   SATURN_MOONS.forEach(function(m) {
     m.a = m.a_km / SCENE_UNIT_KM;
@@ -306,6 +324,14 @@
     tiltGroup.add(mesh);
     m.mesh = mesh;
     moonMeshes.push(m);
+
+    // Canvas label sprite attached to the moon mesh
+    var hex = '#' + m.color.toString(16).padStart(6, '0');
+    var label = makeMoonLabel(m.name, hex);
+    label.position.set(0, m.radius + 0.08, 0);
+    mesh.add(label);
+    m.label = label;
+
     // Orbit polyline
     var pts = [];
     for (var k = 0; k <= 128; k++) {

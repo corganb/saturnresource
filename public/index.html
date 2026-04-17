@@ -332,6 +332,19 @@
     tiltGroup.add(mesh);
     m.mesh = mesh;
     moonMeshes.push(m);
+    // Attach analysis data per moon
+    var SATURN_MOON_DATA = {
+      Mimas:     { type: 'Major moon', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Mimas_Cassini.jpg/220px-Mimas_Cassini.jpg', desc: 'Known for the giant Herschel crater (130 km) giving it a Death Star appearance. Innermost of the major moons.', fields: [{label:'Radius',value:'198 km'},{label:'Orbit',value:'185,539 km'},{label:'Period',value:'0.94 days'}] },
+      Enceladus: { type: 'Major moon', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/PIA17202_-_Approaching_Enceladus.jpg/220px-PIA17202_-_Approaching_Enceladus.jpg', desc: 'Active cryovolcanism: geysers of water vapor erupt from the south polar tiger stripes. Subsurface ocean confirmed by Cassini. Prime astrobiology target.', fields: [{label:'Radius',value:'252 km'},{label:'Orbit',value:'238,042 km'},{label:'Period',value:'1.37 days'},{label:'Geysers',value:'~100 identified'}] },
+      Tethys:    { type: 'Major moon', desc: 'Dominated by the enormous Odysseus crater (400 km) and Ithaca Chasma rift valley spanning 75% of the circumference.', fields: [{label:'Radius',value:'531 km'},{label:'Orbit',value:'294,672 km'},{label:'Period',value:'1.89 days'}] },
+      Dione:     { type: 'Major moon', desc: 'Wispy bright ice cliffs on trailing hemisphere. Possible subsurface ocean.', fields: [{label:'Radius',value:'561 km'},{label:'Orbit',value:'377,415 km'},{label:'Period',value:'2.74 days'}] },
+      Rhea:      { type: 'Major moon', desc: 'Second largest moon of Saturn. Heavily cratered icy surface. Tenuous atmosphere of oxygen and CO2 detected by Cassini.', fields: [{label:'Radius',value:'764 km'},{label:'Orbit',value:'527,068 km'},{label:'Period',value:'4.52 days'}] },
+      Titan:     { type: 'Major moon', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Titan_in_true_color.jpg/220px-Titan_in_true_color.jpg', desc: 'Only moon with a dense atmosphere (1.5x Earth surface pressure). Liquid methane/ethane lakes and seas on the surface. Larger than Mercury. Dragonfly mission arriving 2034.', fields: [{label:'Radius',value:'2,574 km'},{label:'Orbit',value:'1,221,865 km'},{label:'Period',value:'15.95 days'},{label:'Atmosphere',value:'98.4% N\u2082, 1.6% CH\u2084'},{label:'Surface pressure',value:'1.47 atm'}] },
+      Iapetus:   { type: 'Major moon', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg/220px-Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg', desc: 'Two-tone coloring: leading hemisphere dark (Cassini Regio), trailing hemisphere bright. Equatorial ridge up to 20 km high.', fields: [{label:'Radius',value:'735 km'},{label:'Orbit',value:'3,560,854 km'},{label:'Period',value:'79.3 days'},{label:'Eccentricity',value:'0.029'}] },
+    };
+    var sd = SATURN_MOON_DATA[m.name];
+    if (sd) mesh.userData = { _analysis: { name: m.name, type: sd.type, image: sd.image, desc: sd.desc, fields: sd.fields, icon: '\uD83C\uDF15' } };
+
 
     // Canvas label sprite attached to the moon mesh
     var hex = '#' + m.color.toString(16).padStart(6, '0');

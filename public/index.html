@@ -302,14 +302,15 @@
   // Scene scale: Saturn radius 1.5 = 58232 km real, so 1 unit = 38,821 km.
   // Titan orbits at 1,221,865 km real = 31.5 units out.
   var SCENE_UNIT_KM = 58232 / 1.5;
+  var SATURN_TILT_RAD = 0.466527; // 26.73 deg, matches tiltGroup.rotation.z
   var SATURN_MOONS = [
-    { name: 'Mimas',     a_km: 185539,  e: 0.0196, period_days: 0.942, color: 0xd8d0c8, radius: 0.04 },
-    { name: 'Enceladus', a_km: 238042,  e: 0.0047, period_days: 1.370, color: 0xf0f0e8, radius: 0.05 },
-    { name: 'Tethys',    a_km: 294672,  e: 0.0001, period_days: 1.888, color: 0xd0c8c0, radius: 0.055 },
-    { name: 'Dione',     a_km: 377415,  e: 0.0022, period_days: 2.737, color: 0xc8c0b8, radius: 0.06 },
-    { name: 'Rhea',      a_km: 527068,  e: 0.0013, period_days: 4.518, color: 0xc0b8b0, radius: 0.065 },
-    { name: 'Titan',     a_km: 1221865, e: 0.0288, period_days: 15.945, color: 0xd4a860, radius: 0.10 },
-    { name: 'Iapetus',   a_km: 3560854, e: 0.0286, period_days: 79.322, color: 0x888078, radius: 0.07 },
+    { name: 'Mimas',     slug: 'mimas',     a_km: 185539,  e: 0.0196, period_days: 0.942, color: 0xd8d0c8, radius: 0.04 },
+    { name: 'Enceladus', slug: 'enceladus', a_km: 238042,  e: 0.0047, period_days: 1.370, color: 0xf0f0e8, radius: 0.05 },
+    { name: 'Tethys',    slug: 'tethys',    a_km: 294672,  e: 0.0001, period_days: 1.888, color: 0xd0c8c0, radius: 0.055 },
+    { name: 'Dione',     slug: 'dione',     a_km: 377415,  e: 0.0022, period_days: 2.737, color: 0xc8c0b8, radius: 0.06 },
+    { name: 'Rhea',      slug: 'rhea',      a_km: 527068,  e: 0.0013, period_days: 4.518, color: 0xc0b8b0, radius: 0.065 },
+    { name: 'Titan',     slug: 'titan',     a_km: 1221865, e: 0.0288, period_days: 15.945, color: 0xd4a860, radius: 0.10 },
+    { name: 'Iapetus',   slug: 'iapetus',   a_km: 3560854, e: 0.0286, period_days: 79.322, color: 0x888078, radius: 0.07 },
   ];
   // Shared canvas-label helper. Makes a Sprite that always faces the
   // camera with a stroked text layer for legibility against the scene.
@@ -373,7 +374,46 @@
     );
     tiltGroup.add(orbitLine);
     m.orbitLine = orbitLine;
+    m.phase = 0;
   });
+
+  // ═══ REAL MOON POSITIONS (JPL Horizons via Supabase edge fn) ═══
+  // Anchors each major moon to its true Saturn-centered position at page
+  // load, then lets the Kepler sim propagate forward from that anchor.
+  // Applies inverse of Saturn's 26.73 deg axial tilt to land in tiltGroup's
+  // local xz plane.
+  (function fetchMoonPositions() {
+    var FN_BASE = 'https://pxocavaczfjcpvqeiznt.supabase.co/functions/v1/horizons-ephemeris';
+    var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4b2NhdmFjemZqY3B2cWVpem50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDA3MDcsImV4cCI6MjA5MDExNjcwN30.48A2xW4YoGCESsVurxmW3MP9x_lq2AJ8XeS8nR2RVGI';
+    var ca = Math.cos(SATURN_TILT_RAD), sa = Math.sin(SATURN_TILT_RAD);
+    moonMeshes.forEach(function(m) {
+      if (!m.slug) return;
+      fetch(FN_BASE + '?id=' + m.slug + '&center=' + encodeURIComponent('@saturn'), {
+        headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+      })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+      .then(function(data) {
+        if (!data || !isFinite(data.x_km)) return;
+        var wx = data.x_km / SCENE_UNIT_KM;
+        var wy = data.z_km / SCENE_UNIT_KM;
+        var wz = -data.y_km / SCENE_UNIT_KM;
+        var lx = wx * ca + wy * sa;
+        var lz = wz;
+        var theta = Math.atan2(lz, lx);
+        var E = 2 * Math.atan(Math.sqrt((1 - m.e) / (1 + m.e)) * Math.tan(theta / 2));
+        var M = E - m.e * Math.sin(E);
+        var simAtAnchor = (window.__rs_sim_time || 0);
+        var n = (Math.PI * 2) / m.period;
+        m.phase = M - n * simAtAnchor;
+        m.real_xyz = { x: lx, y: 0, z: lz, epoch_cal: data.epoch_cal };
+        var r = m.a * (1 - m.e * Math.cos(E));
+        m.mesh.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
+      })
+      .catch(function(err) {
+        if (window.console) console.warn('[horizons] ' + m.name + ': ' + err.message);
+      });
+    });
+  })();
 
   function solveKepler(M, e) {
     var E = M;
@@ -502,7 +542,7 @@
     var simTime = __rs_sim_time;
     moonMeshes.forEach(function(m) {
       var n = (Math.PI * 2) / m.period;
-      var M = (n * simTime) % (Math.PI * 2);
+      var M = ((m.phase || 0) + n * simTime) % (Math.PI * 2);
       var E = solveKepler(M, m.e);
       var nu = 2 * Math.atan2(Math.sqrt(1 + m.e) * Math.sin(E/2), Math.sqrt(1 - m.e) * Math.cos(E/2));
       var r = m.a * (1 - m.e * Math.cos(E));

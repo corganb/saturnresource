@@ -331,7 +331,7 @@
   }
 
   var moonMeshes = [];
-  SATURN_MOONS.forEach(function(m) {
+  SATURN_MOONS.forEach(function(m, idx) {
     m.a = m.a_km / SCENE_UNIT_KM;
     m.period = m.period_days * 86400;
     var mesh = new THREE.Mesh(
@@ -374,7 +374,8 @@
     );
     tiltGroup.add(orbitLine);
     m.orbitLine = orbitLine;
-    m.phase = 0;
+    m.phase = (idx / SATURN_MOONS.length) * Math.PI * 2;
+    mesh.position.set(m.a * Math.cos(m.phase), 0, m.a * Math.sin(m.phase));
   });
 
   // ═══ REAL MOON POSITIONS (JPL Horizons via Supabase edge fn) ═══

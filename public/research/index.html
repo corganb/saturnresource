@@ -23,6 +23,13 @@
   .lede { font-size: 13px; color: rgba(200,210,230,0.82); margin-bottom: 32px; max-width: 680px; }
   h2 { font-size: 13px; font-weight: 600; color: #d4b46a; margin: 32px 0 12px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
   ul { list-style: none; margin-bottom: 24px; }
+  .featured { background: rgba(80,140,220,0.05); border: 1px solid rgba(80,140,220,0.20); border-radius: 6px; padding: 0; margin-bottom: 12px; }
+  .featured .featured-link { display: block; padding: 14px 16px; text-decoration: none; color: inherit; }
+  .featured .featured-link:hover .featured-title { color: var(--accent-link, #7eb6ff); }
+  .featured-title { font-size: 15px; font-weight: 600; color: rgba(245,248,255,0.95); margin-bottom: 6px; line-height: 1.3; }
+  .featured-abstract { font-size: 12.5px; color: rgba(200,210,230,0.78); margin-bottom: 8px; line-height: 1.55; }
+  .featured-meta { font-size: 10.5px; color: rgba(160,172,200,0.55); letter-spacing: 0.04em; }
+
   li { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; color: rgba(200,210,230,0.85); display: flex; justify-content: space-between; gap: 16px; }
   li:last-child { border-bottom: none; }
   .status { font-size: 10px; color: rgba(160,172,200,0.45); letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; align-self: center; }
@@ -46,8 +53,8 @@
 
   <h2>Upcoming reviews</h2>
   <ul>
+    <li class="featured"><a href="/research/enceladus-plume-chemistry" class="featured-link"><div class="featured-title">Cassini&#x27;s Enceladus plume in-situ chemistry and the case for habitability</div><div class="featured-abstract">Review of Cassini in-situ measurements of the Enceladus south-polar plume, including INMS detection of molecular hydrogen, CDA characterisation of nanometric silica grains, and the resulting case for present-day hydrothermal activity in the subsurface ocean.</div><div class="featured-meta">2026-04-25 &middot; 8 min read &middot; Available now</div></a></li>
     <li><span>Cassini legacy: ring particle dynamics and resonances</span><span class="status">Drafting</span></li>
-    <li><span>Enceladus plume composition and ocean chemistry</span><span class="status">Drafting</span></li>
     <li><span>Titan hydrocarbon cycle and surface lakes</span><span class="status">Drafting</span></li>
     <li><span>Ring age and origin hypotheses</span><span class="status">Drafting</span></li>
     <li><span>Saturn polar hexagon and seasonal change</span><span class="status">Drafting</span></li>
